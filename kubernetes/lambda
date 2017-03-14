@@ -1,0 +1,56 @@
+from __future__ import print_function
+import json
+import logging
+import boto3
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+def lambda_handler(event, context):
+    autoscaling = boto3.client('autoscaling')
+    ec2 = boto3.client('ec2')
+    route53 = boto3.client('route53')
+    logger.info(json.dumps(event))
+    message = json.loads(event['Records'][0]['Sns']['Message'])
+    asg_name = message['AutoScalingGroupName']
+    asg_event = message['Event']
+
+    if asg_event == "autoscaling:EC2_INSTANCE_LAUNCH" or asg_event == "autoscaling:EC2_INSTANCE_TERMINATE":
+        logger.info("Getting Tags")
+        as_response = autoscaling.describe_tags(Filters = [{'Name': 'auto-scaling-group', 'Values': [asg_name], }, {'Name': 'key', 'Values': ['DomainMeta'], }],  MaxRecords = 1)
+        logger.info("Processing ASG Tags")
+
+        if len(as_response['Tags']) is 0:
+            logger.error("ASG: {} does not define Route53 DomainMeta tag".format(asg_name))
+        else :
+            tokens = as_response['Tags'][0]['Value'].split(':')
+            route53tags = {'HostedZoneId': tokens[0] ,'RecordName': tokens[1] }
+            logger.info("Found tags: ")
+            logger.info(json.dumps(route53tags))
+            logger.info("Retrieving Instances in ASG")
+            as_response = autoscaling.describe_auto_scaling_groups(AutoScalingGroupNames = [asg_name], MaxRecords = 1 )
+            instanceIds = []
+            for instance in as_response['AutoScalingGroups'][0]['Instances']: 
+                instanceIds.append(instance['InstanceId'])
+                ec2_response = ec2.describe_instances(InstanceIds = instanceIds)
+                resourceRecords = []
+            for reservation in ec2_response['Reservations']: 
+                resourceRecords.append({'Value': reservation['Instances'][0]['NetworkInterfaces'][0]['PrivateIpAddress']
+            })
+                logger.info("Found Resources: ")
+                logger.info(json.dumps(resourceRecords))
+                logger.info("Getting zone name")
+                r53_response = route53.get_hosted_zone(Id = route53tags['HostedZoneId'])
+                zoneName = r53_response['HostedZone']['Name']
+                logger.info("Found zone name: {}".format(zoneName))
+                logger.info("Updating Route53 Record")
+                r53_response = route53.change_resource_record_sets( HostedZoneId = route53tags['HostedZoneId'], ChangeBatch = {'Changes': [{'Action': 'UPSERT', 'ResourceRecordSet': {'Name': "{name}.{domain}".format(name = route53tags['RecordName'], domain = zoneName),
+                            'Type': 'A',
+                            'TTL': 10,
+                            'ResourceRecords': resourceRecords
+                        }
+                    }]
+                }
+            )
+
+
