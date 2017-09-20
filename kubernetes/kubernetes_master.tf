@@ -1,5 +1,5 @@
 data "template_file" "kubernetes_master_userdata" {
-  template = "${file("../../mod-infrastructure/userdata/kubernetes_master.tpl")}"
+  template = "${file("../../kubernetes/userdata/kubernetes_master.tpl")}"
   vars {
     env = "${var.tag_environment}"
     kubernetes_dns_service_ip = "${var.kubernetes_dns_service_ip}"
@@ -14,7 +14,7 @@ resource "aws_launch_configuration" "kubernetes_master" {
   instance_type = "${var.core_node_size}"
   associate_public_ip_address = false
   user_data = "${data.template_file.kubernetes_master_userdata.rendered}"
-  key_name = "coreos"
+  key_name = "kubernetes-2"
   iam_instance_profile = "${aws_iam_instance_profile.kubernetes_master.id}"
   lifecycle {
     create_before_destroy = true

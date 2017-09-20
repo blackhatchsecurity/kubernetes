@@ -145,13 +145,6 @@ resource "aws_route_table" "public" {
   }
 }
 
-resource "aws_route" "poseidon_public_shared" {
-  route_table_id = "${aws_route_table.public.id}"
-  destination_cidr_block = "10.25.0.0/16"
-  vpc_peering_connection_id = "${aws_vpc_peering_connection.shared.id}"
-  depends_on = ["aws_route_table.public", "aws_vpc_peering_connection.shared"]
-}
-
 output "rt_public" {
   value = "${aws_route_table.public.id}"
 }
@@ -249,36 +242,6 @@ resource "aws_route_table_association" "private1b" {
 resource "aws_route_table_association" "private1c" {
   subnet_id = "${aws_subnet.private1c.id}"
   route_table_id = "${aws_route_table.private_1c.id}"
-}
-
-resource "aws_vpc_peering_connection" "shared" {
-  peer_owner_id = "${var.shared_owner_id}"
-  peer_vpc_id = "${var.shared_vpc_id}"
-  vpc_id = "${aws_vpc.main.id}"
-  tags {
-    Name = "poseidon_${var.tag_environment}_to_shared"
-  }
-}
-
-resource "aws_route" "poseidon_private1a_shared" {
-  route_table_id = "${aws_route_table.private_1a.id}"
-  destination_cidr_block = "${var.shared_vpc_cidr_block}"
-  vpc_peering_connection_id = "${aws_vpc_peering_connection.shared.id}"
-  depends_on = ["aws_route_table.private_1a", "aws_vpc_peering_connection.shared"]
-}
-
-resource "aws_route" "poseidon_private1b_shared" {
-  route_table_id = "${aws_route_table.private_1b.id}"
-  destination_cidr_block = "${var.shared_vpc_cidr_block}"
-  vpc_peering_connection_id = "${aws_vpc_peering_connection.shared.id}"
-  depends_on = ["aws_route_table.private_1b", "aws_vpc_peering_connection.shared"]
-}
-
-resource "aws_route" "poseidon_private1c_shared" {
-  route_table_id = "${aws_route_table.private_1c.id}"
-  destination_cidr_block = "${var.shared_vpc_cidr_block}"
-  vpc_peering_connection_id = "${aws_vpc_peering_connection.shared.id}"
-  depends_on = ["aws_route_table.private_1c", "aws_vpc_peering_connection.shared"]
 }
 
 
@@ -486,7 +449,6 @@ resource "aws_security_group" "haproxy_node" {
     to_port = 22
     protocol = "TCP"
     cidr_blocks = [
-      "${var.shared_vpc_cidr_block}",
       "62.255.129.107/32",
       "62.255.129.108/32",
       "62.255.129.110/32"
@@ -498,7 +460,6 @@ resource "aws_security_group" "haproxy_node" {
     to_port = 8888
     protocol = "TCP"
     cidr_blocks = [
-      "${var.shared_vpc_cidr_block}",
       "62.255.129.107/32",
       "62.255.129.108/32",
       "62.255.129.110/32"

@@ -1,9 +1,9 @@
 variable "haproxy_node_size" {
-  default = "m3.2xlarge"
+  default = "t2.nano"
 }
 
 data "template_file" "haproxy_node_userdata" {
-  template = "${file("../../mod-infrastructure/userdata/haproxy_node.tpl")}"
+  template = "${file("../../kubernetes/userdata/haproxy_node.tpl")}"
   vars {
     env = "${var.tag_environment}"
     kubernetes_dns_service_ip = "${var.kubernetes_dns_service_ip}"
@@ -19,7 +19,7 @@ resource "aws_launch_configuration" "haproxy_node" {
   instance_type = "${var.haproxy_node_size}"
   associate_public_ip_address = true
   user_data = "${data.template_file.haproxy_node_userdata.rendered}"
-  key_name = "coreos"
+  key_name = "kubernetes-2"
   iam_instance_profile = "${aws_iam_instance_profile.haproxy_node.id}"
 
 
@@ -59,10 +59,10 @@ resource "aws_autoscaling_notification" "dns_kubernetes_haproxy" {
 
 resource "aws_autoscaling_group" "haproxy_node" {
   name = "haproxy_nodes.${var.tag_environment}"
-  max_size = 20
-  min_size = 3
+  max_size = 1
+  min_size = 1
   health_check_grace_period = 300
-  desired_capacity = 3
+  desired_capacity = 1
   launch_configuration = "${aws_launch_configuration.haproxy_node.name}"
   vpc_zone_identifier = ["${aws_subnet.public1a.id}" , "${aws_subnet.public1b.id}" , "${aws_subnet.public1c.id}"]
 

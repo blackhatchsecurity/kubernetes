@@ -2,7 +2,7 @@
 
 
 data "template_file" "etcd_userdata" {
-  template = "${file("../../mod-infrastructure/userdata/etcd.tpl")}"
+  template = "${file("../../kubernetes/userdata/etcd.tpl")}"
   vars {
     env = "${var.tag_environment}"
   }
@@ -13,7 +13,7 @@ resource "aws_launch_configuration" "etcd_node" {
   instance_type = "${var.core_node_size}"
   associate_public_ip_address = false
   user_data = "${data.template_file.etcd_userdata.rendered}"
-  key_name = "coreos"
+  key_name = "kubernetes-2"
   iam_instance_profile = "${aws_iam_instance_profile.kubernetes_node.id}"
   lifecycle {
     create_before_destroy = true
@@ -74,10 +74,10 @@ resource "aws_autoscaling_notification" "dns_etcd" {
 
 resource "aws_autoscaling_group" "etcd_node" {
   name = "etcd_node.${var.tag_environment}"
-  max_size = 3
-  min_size = 3
+  max_size = 1
+  min_size = 1
   health_check_grace_period = 5
-  desired_capacity = 3
+  desired_capacity = 1
   launch_configuration = "${aws_launch_configuration.etcd_node.name}"
   vpc_zone_identifier = ["${aws_subnet.private1a.id}"]
 

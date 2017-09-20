@@ -1,7 +1,5 @@
-variable "core_node_size" {}
-
 data "template_file" "kubernetes_node_userdata" {
-  template = "${file("../../mod-infrastructure/userdata/kubernetes_node.tpl")}"
+  template = "${file("../../kubernetes/userdata/kubernetes_node.tpl")}"
   vars {
     env = "${var.tag_environment}"
     kubernetes_dns_service_ip = "${var.kubernetes_dns_service_ip}"
@@ -36,7 +34,7 @@ resource "aws_launch_configuration" "kubernetes_node" {
   instance_type = "${var.core_node_size}"
   associate_public_ip_address = false
   user_data = "${data.template_file.kubernetes_node_userdata.rendered}"
-  key_name = "coreos"
+  key_name = "kubernetes-2"
   iam_instance_profile = "${aws_iam_instance_profile.kubernetes_node.id}"
   lifecycle {
     create_before_destroy = true
@@ -64,10 +62,10 @@ resource "aws_launch_configuration" "kubernetes_node" {
 
 resource "aws_autoscaling_group" "kubernetes_node" {
   name = "kubernetes_nodes.${var.tag_environment}"
-  max_size = 20
-  min_size = 3
+  max_size = 10
+  min_size = 1
   health_check_grace_period = 300
-  desired_capacity = 6
+  desired_capacity = 1
   launch_configuration = "${aws_launch_configuration.kubernetes_node.name}"
   vpc_zone_identifier = ["${aws_subnet.private1a.id}" , "${aws_subnet.private1b.id}" , "${aws_subnet.private1c.id}"]
 

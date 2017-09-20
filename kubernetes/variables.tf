@@ -1,5 +1,9 @@
 variable "aws_region" {}
 
+variable "core_node_size" {
+    default = "t2.nano"
+}
+
 variable "vpc_cidr_network" {}
 
 variable "tag_environment" {}
